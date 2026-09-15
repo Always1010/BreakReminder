@@ -13,6 +13,8 @@ const DEFAULT_SETTINGS = {
   audioOutputDeviceId: "",
   audioOutputDeviceLabel: "",
   soundEnabled: true,
+  workStartSoundEnabled: true,
+  workEndSoundEnabled: true,
   systemNotificationEnabled: true,
   popupEnabled: true,
   displaySleepAllowed: true,
@@ -174,7 +176,7 @@ async function showReminderWindow(title, message, kind, durationMinutes = 0) {
   reminderWindowId = popup.id ?? null;
 }
 
-async function notify(title, message, { kind = "reminder", durationMinutes = 0, settingsOverride = {} } = {}) {
+async function notify(title, message, { kind = "reminder", durationMinutes = 0, soundEvent = "", settingsOverride = {} } = {}) {
   const settings = { ...await getSettings(), ...settingsOverride };
   if (kind !== "test") await stopSound();
   const channels = [];
@@ -187,7 +189,12 @@ async function notify(title, message, { kind = "reminder", durationMinutes = 0, 
       priority: 2
     }));
   }
-  if (settings.soundEnabled) channels.push(ring(settings, { title, kind }));
+  const soundEventEnabled = soundEvent === "workStart"
+    ? settings.workStartSoundEnabled
+    : soundEvent === "workEnd"
+      ? settings.workEndSoundEnabled
+      : true;
+  if (settings.soundEnabled && soundEventEnabled) channels.push(ring(settings, { title, kind }));
   if (settings.popupEnabled) channels.push(showReminderWindow(title, message, kind, durationMinutes));
 
   const results = await Promise.allSettled(channels);
@@ -242,7 +249,10 @@ async function tick({ workDeadlineDue = false } = {}) {
       state = blankState();
       await putState(state);
       await clearWorkDeadline();
-      await notify("休息时间到了", "当前工作时段结束，请休息、走动一下。", { kind: "outside" });
+      await notify("休息时间到了", "当前工作时段结束，请休息、走动一下。", {
+        kind: "outside",
+        soundEvent: "workEnd"
+      });
     } else {
       await putState(state);
       await clearWorkDeadline();
@@ -259,7 +269,10 @@ async function tick({ workDeadlineDue = false } = {}) {
     };
     await putState(state);
     await scheduleWorkDeadline(state, settings, now);
-    await notify("开始工作时段", `现在是 ${settings.windows[activeWindowIndex].start}，新一轮计时开始。`, { kind: "work" });
+    await notify("开始工作时段", `现在是 ${settings.windows[activeWindowIndex].start}，新一轮计时开始。`, {
+      kind: "work",
+      soundEvent: "workStart"
+    });
     return;
   }
 
@@ -270,7 +283,10 @@ async function tick({ workDeadlineDue = false } = {}) {
       state.breakEndsAt = 0;
       await putState(state);
       await scheduleWorkDeadline(state, settings, now);
-      await notify("休息结束", "休息时间结束，下一轮工作计时开始。", { kind: "work" });
+      await notify("休息结束", "休息时间结束，下一轮工作计时开始。", {
+        kind: "work",
+        soundEvent: "workStart"
+      });
     } else {
       await putState(state);
       await clearWorkDeadline();
@@ -287,7 +303,8 @@ async function tick({ workDeadlineDue = false } = {}) {
     await clearWorkDeadline();
     await notify("该休息了", `请离开座位活动 ${settings.breakMinutes} 分钟。`, {
       kind: "break",
-      durationMinutes: settings.breakMinutes
+      durationMinutes: settings.breakMinutes,
+      soundEvent: "workEnd"
     });
   } else {
     await putState(state);

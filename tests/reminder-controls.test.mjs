@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [optionsHtml, popupHtml, popupJs, reminderJs, backgroundJs] = await Promise.all([
+const [optionsHtml, optionsJs, popupHtml, popupJs, reminderJs, backgroundJs] = await Promise.all([
   readFile(new URL("../options.html", import.meta.url), "utf8"),
+  readFile(new URL("../options.js", import.meta.url), "utf8"),
   readFile(new URL("../popup.html", import.meta.url), "utf8"),
   readFile(new URL("../popup.js", import.meta.url), "utf8"),
   readFile(new URL("../reminder.js", import.meta.url), "utf8"),
@@ -11,6 +12,11 @@ const [optionsHtml, popupHtml, popupJs, reminderJs, backgroundJs] = await Promis
 
 for (const id of ["soundEnabled", "systemNotificationEnabled", "popupEnabled"]) {
   assert.ok(optionsHtml.includes(`id="${id}"`), `设置页应提供 ${id} 开关`);
+}
+
+for (const id of ["workStartSoundEnabled", "workEndSoundEnabled"]) {
+  assert.ok(optionsHtml.includes(`id="${id}"`), `设置页应提供 ${id} 响铃节点开关`);
+  assert.ok(optionsJs.includes(`${id}: $("${id}").checked`), `设置页应保存 ${id} 响铃节点设置`);
 }
 
 assert.ok(popupHtml.includes('id="pause"'), "主界面应提供全局暂停按钮");

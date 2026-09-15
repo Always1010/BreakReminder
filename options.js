@@ -8,6 +8,8 @@ const DEFAULTS = {
   audioOutputDeviceId: "",
   audioOutputDeviceLabel: "",
   soundEnabled: true,
+  workStartSoundEnabled: true,
+  workEndSoundEnabled: true,
   systemNotificationEnabled: true,
   popupEnabled: true,
   displaySleepAllowed: true,
@@ -312,6 +314,8 @@ async function init() {
   $("sound").value = settings.sound;
   $("soundDuration").value = settings.soundDurationMinutes;
   $("soundEnabled").checked = settings.soundEnabled;
+  $("workStartSoundEnabled").checked = settings.workStartSoundEnabled;
+  $("workEndSoundEnabled").checked = settings.workEndSoundEnabled;
   $("systemNotificationEnabled").checked = settings.systemNotificationEnabled;
   $("popupEnabled").checked = settings.popupEnabled;
   $("audioOutput").value = settings.audioOutputDeviceId;
@@ -346,6 +350,8 @@ $("save").addEventListener("click", async () => {
     audioOutputDeviceId: $("audioOutput").value,
     audioOutputDeviceLabel: $("audioOutput").selectedOptions[0]?.dataset.deviceLabel || "",
     soundEnabled: $("soundEnabled").checked,
+    workStartSoundEnabled: $("workStartSoundEnabled").checked,
+    workEndSoundEnabled: $("workEndSoundEnabled").checked,
     systemNotificationEnabled: $("systemNotificationEnabled").checked,
     popupEnabled: $("popupEnabled").checked,
     displaySleepAllowed: settings.displaySleepAllowed,
