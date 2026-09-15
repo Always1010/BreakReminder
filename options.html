@@ -6,80 +6,125 @@
   <title>休息提醒设置</title>
   <link rel="stylesheet" href="ui.css">
 </head>
-<body class="page">
-  <h1>休息提醒设置</h1>
-  <p class="intro">浏览器打开时持续计时，电脑锁屏或睡眠时自动暂停。</p>
-
-  <section class="card">
-    <h2>计时参数</h2>
-    <div class="grid">
-      <div class="field"><label for="work">工作间隔（分钟）</label><input id="work" type="number" min="1" max="240"></div>
-      <div class="field"><label for="break">休息时长（分钟）</label><input id="break" type="number" min="1" max="120"></div>
+<body class="page options-page">
+  <header class="page-header">
+    <div class="brand-mark" aria-hidden="true">◒</div>
+    <div>
+      <p class="eyebrow">BREAK BELL</p>
+      <h1>休息提醒设置</h1>
+      <p class="intro">让工作与休息保持舒服的节奏。浏览器打开时持续计时，锁屏或睡眠时自动暂停。</p>
     </div>
-  </section>
+  </header>
 
-  <section class="card schedule-card">
-    <div class="schedule-heading">
-      <div><h2>提醒时间轴</h2><p class="muted">绿色区域进行工作计时，空白区域自动休息。</p></div>
-      <button id="add" class="add" type="button">＋ 添加时段</button>
-    </div>
-    <div class="time-axis" aria-hidden="true"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-    <div id="scheduleTimeline" class="schedule-timeline" role="application" aria-label="24小时工作时段。拖动色块移动，拖动两端调整时间。"></div>
-    <p class="timeline-help">拖动整个色块调整时段；拖动左右边缘改变开始或结束时间；点击空白处可直接新增。</p>
-    <div id="periodEditor" class="period-editor" hidden>
-      <div class="field"><label for="selectedStart">开始时间</label><input id="selectedStart" type="time" step="300"></div>
-      <div class="field"><label for="selectedEnd">结束时间</label><input id="selectedEnd" type="time" step="300"></div>
-      <button id="deletePeriod" class="delete" type="button">删除时段</button>
-    </div>
-    <p id="timelineMessage" class="timeline-message" aria-live="polite"></p>
-  </section>
-
-  <section class="card">
-    <h2>提醒方式</h2>
-    <p class="muted">可自由组合；全部关闭时仍会照常计时，但不会打扰你。</p>
-    <div class="reminder-channels">
-      <label class="channel"><input id="soundEnabled" type="checkbox"> 声音提醒</label>
-      <label class="channel"><input id="systemNotificationEnabled" type="checkbox"> Windows 系统通知</label>
-      <label class="channel"><input id="popupEnabled" type="checkbox"> 浏览器提醒弹窗</label>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>声音提醒</h2>
-    <div class="sound-events">
+  <section class="card theme-card">
+    <div class="section-heading">
       <div>
-        <strong>响铃节点</strong>
-        <p class="muted">需同时开启上方“声音提醒”。工作开始也就是休息结束；工作结束也就是休息开始。</p>
+        <p class="section-kicker">外观</p>
+        <h2>主题与色调</h2>
+        <p class="muted">选择一套整体风格，设置页、主界面和提醒窗口会同步换肤。</p>
       </div>
-      <div class="reminder-channels">
-        <label class="channel"><input id="workStartSoundEnabled" type="checkbox"> 工作开始时响铃</label>
-        <label class="channel"><input id="workEndSoundEnabled" type="checkbox"> 工作结束时响铃</label>
+      <span id="themeName" class="theme-current">林间晨光</span>
+    </div>
+    <div id="themePicker" class="theme-picker" role="radiogroup" aria-label="界面主题"></div>
+    <div id="customThemePanel" class="custom-theme-panel" hidden>
+      <div class="color-field">
+        <label for="customPrimary">主色</label>
+        <input id="customPrimary" type="color" value="#337D6B">
+        <span id="customPrimaryValue">#337D6B</span>
+      </div>
+      <div class="color-field">
+        <label for="customSecondary">辅助色</label>
+        <input id="customSecondary" type="color" value="#E59A68">
+        <span id="customSecondaryValue">#E59A68</span>
+      </div>
+      <div class="field intensity-field">
+        <label for="customIntensity">色彩浓度</label>
+        <select id="customIntensity">
+          <option value="soft">柔和</option>
+          <option value="balanced">平衡</option>
+          <option value="vivid">明快</option>
+        </select>
       </div>
     </div>
-    <div class="grid">
-      <div class="field"><label for="sound">声音</label><select id="sound"><optgroup label="强提醒"><option value="alarm">经典闹钟</option><option value="digital-alarm">电子闹钟（CC0）</option><option value="siren-alarm">强力警报（CC0）</option></optgroup><optgroup label="柔和声音"><option value="soft">柔和铃声</option><option value="gentle-rain">轻柔雨声（CC0）</option><option value="gentle-wind">自然风声（CC0）</option><option value="white-noise">柔和白噪音</option><option value="piano-loop">舒缓钢琴（CC0）</option><option value="soft-sax">轻松萨克斯（CC0）</option><option value="calm-loop">宁静氛围音乐（CC0）</option></optgroup><option value="custom">自定义声音</option></select></div>
-      <div class="field"><label for="volume">音量（0 - 100）</label><input id="volume" type="number" min="0" max="100"></div>
-      <div class="field"><label for="soundDuration">铃声循环时长（分钟）</label><input id="soundDuration" type="number" min="0.5" max="30" step="0.5"></div>
-    </div>
-    <div class="audio-output-panel">
-      <div class="audio-output-heading">
-        <div>
-          <label for="audioOutput">铃声输出设备</label>
-          <p class="muted">只改变本插件的铃声；浏览器中的音乐、视频仍使用系统默认输出。</p>
-        </div>
-        <button id="refreshAudioOutputs" class="add" type="button">授权并刷新设备</button>
-      </div>
-      <select id="audioOutput">
-        <option value="">系统默认输出（跟随浏览器）</option>
-      </select>
-      <p class="audio-output-guide">首次查看完整设备列表时，浏览器可能显示“麦克风”权限提示。这项权限仅用于识别扬声器、耳机等音频设备；插件会立即关闭输入，不录音，也不上传音频。</p>
-      <p id="audioOutputStatus" class="audio-output-status" aria-live="polite"></p>
-    </div>
-    <div class="field custom-sound"><label for="custom">自定义声音（可选，MP3/WAV/OGG）</label><input id="custom" type="file" accept="audio/*"></div>
-    <button id="testReminder" class="add test-reminder" type="button">🔔 测试声音、通知和弹窗</button>
   </section>
 
-  <button id="save" class="save" type="button">保存设置</button><span id="saved" class="saved"></span>
+  <div class="options-layout">
+    <main class="options-main">
+      <section class="card">
+        <div class="section-heading compact"><div><p class="section-kicker">节奏</p><h2>计时参数</h2></div></div>
+        <div class="grid">
+          <div class="field"><label for="work">工作间隔</label><div class="input-with-unit"><input id="work" type="number" min="1" max="240"><span>分钟</span></div></div>
+          <div class="field"><label for="break">休息时长</label><div class="input-with-unit"><input id="break" type="number" min="1" max="120"><span>分钟</span></div></div>
+        </div>
+      </section>
+
+      <section class="card schedule-card">
+        <div class="schedule-heading">
+          <div>
+            <p class="section-kicker">日程</p>
+            <h2>提醒时间轴</h2>
+            <p class="muted">彩色区域进行工作计时，空白区域自动休息。</p>
+          </div>
+          <button id="add" class="add" type="button">＋ 添加时段</button>
+        </div>
+        <div class="timeline-frame">
+          <div class="time-axis" aria-hidden="true">
+            <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+          </div>
+          <div id="scheduleTimeline" class="schedule-timeline" role="application" aria-label="24小时工作时段。拖动色块移动，拖动选中色块的两端调整时间。"></div>
+        </div>
+        <p class="timeline-help">拖动色块调整时段；选中后拖动左右把手改变起止时间；点击空白处可直接新增。</p>
+        <div class="period-list-heading"><span>已设置时段</span><span id="periodCount" class="period-count"></span></div>
+        <div id="periodList" class="period-list"></div>
+        <p id="timelineMessage" class="timeline-message" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <aside class="options-side">
+      <section class="card">
+        <div class="section-heading compact"><div><p class="section-kicker">通知</p><h2>提醒方式</h2></div></div>
+        <p class="muted">可自由组合；全部关闭时仍会照常计时，但不会打扰你。</p>
+        <div class="switch-list">
+          <label class="switch-row"><span><strong>声音提醒</strong><small>播放所选铃声</small></span><input id="soundEnabled" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>Windows 通知</strong><small>显示系统通知</small></span><input id="systemNotificationEnabled" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>浏览器提醒窗</strong><small>在屏幕中央显示大窗口</small></span><input id="popupEnabled" type="checkbox" role="switch"></label>
+        </div>
+      </section>
+
+      <section class="card sound-card">
+        <div class="section-heading compact"><div><p class="section-kicker">声音</p><h2>铃声设置</h2></div></div>
+        <div class="sound-events">
+          <div><strong>响铃节点</strong><p class="muted">工作开始即休息结束；工作结束即休息开始。</p></div>
+          <div class="switch-list compact-switches">
+            <label class="switch-row"><span><strong>工作开始</strong><small>休息结束时</small></span><input id="workStartSoundEnabled" type="checkbox" role="switch"></label>
+            <label class="switch-row"><span><strong>工作结束</strong><small>休息开始时</small></span><input id="workEndSoundEnabled" type="checkbox" role="switch"></label>
+          </div>
+        </div>
+        <div class="field"><label for="sound">声音</label><select id="sound"><optgroup label="强提醒"><option value="alarm">经典闹钟</option><option value="digital-alarm">电子闹钟（CC0）</option><option value="siren-alarm">强力警报（CC0）</option></optgroup><optgroup label="柔和声音"><option value="soft">柔和铃声</option><option value="gentle-rain">轻柔雨声（CC0）</option><option value="gentle-wind">自然风声（CC0）</option><option value="white-noise">柔和白噪音</option><option value="piano-loop">舒缓钢琴（CC0）</option><option value="soft-sax">轻松萨克斯（CC0）</option><option value="calm-loop">宁静氛围音乐（CC0）</option></optgroup><option value="custom">自定义声音</option></select></div>
+        <div class="grid sound-grid">
+          <div class="field"><label for="volume">音量</label><div class="input-with-unit"><input id="volume" type="number" min="0" max="100"><span>%</span></div></div>
+          <div class="field"><label for="soundDuration">循环时长</label><div class="input-with-unit"><input id="soundDuration" type="number" min="0.5" max="30" step="0.5"><span>分钟</span></div></div>
+        </div>
+        <div class="audio-output-panel">
+          <div class="audio-output-heading">
+            <div><label for="audioOutput">铃声输出设备</label><p class="muted">只改变本插件的铃声输出。</p></div>
+            <button id="refreshAudioOutputs" class="quiet-button" type="button">刷新设备</button>
+          </div>
+          <select id="audioOutput"><option value="">系统默认输出（跟随浏览器）</option></select>
+          <p class="audio-output-guide">首次刷新可能出现“麦克风”授权，仅用于识别扬声器、耳机等设备；不录音，也不上传音频。</p>
+          <p id="audioOutputStatus" class="audio-output-status" aria-live="polite"></p>
+        </div>
+        <div class="field custom-sound"><label for="custom">自定义声音（MP3 / WAV / OGG）</label><input id="custom" type="file" accept="audio/*"></div>
+        <button id="testReminder" class="secondary-action test-reminder" type="button">🔔 测试当前提醒</button>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="save-bar">
+    <div><strong>设置保存在此浏览器中</strong><span id="saved" class="saved" aria-live="polite"></span></div>
+    <button id="save" class="save" type="button">保存设置</button>
+  </footer>
+  <script src="theme.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

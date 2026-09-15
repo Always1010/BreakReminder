@@ -5,6 +5,10 @@ const kind = params.get("kind") || "reminder";
 const durationMinutes = Math.max(0, Number(params.get("durationMinutes")) || 0);
 const icons = { break: "🚶", work: "⏱️", outside: "🌙", test: "🔔", reminder: "🔔" };
 
+chrome.storage.local.get("settings")
+  .then(({ settings }) => BreakBellTheme.applyTheme(settings || {}))
+  .catch(() => BreakBellTheme.applyTheme());
+
 document.title = title;
 document.getElementById("reminderTitle").textContent = title;
 document.getElementById("reminderMessage").textContent = message;
