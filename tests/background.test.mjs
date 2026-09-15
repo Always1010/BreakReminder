@@ -11,6 +11,8 @@ const storage = {
     audioOutputDeviceId: "speaker-device-id",
     audioOutputDeviceLabel: "扬声器",
     soundEnabled: true,
+    workStartSoundEnabled: true,
+    workEndSoundEnabled: true,
     systemNotificationEnabled: true,
     popupEnabled: true,
     windows: [{ start: "00:00", end: "24:00" }]
@@ -176,6 +178,35 @@ await new Promise(resolve => setTimeout(resolve, 25));
 assert.equal(storage.state.mode, "break", "截止闹钟触发后应直接进入休息倒计时");
 assert.ok(calls.notifications.some(call => call.options.title === "该休息了"), "截止闹钟应发出休息通知");
 assert.ok(calls.messages.filter(message => message.type === "stop").length > stopsBeforeDeadline, "状态切换前应停止上一周期的声音");
+
+storage.settings.workStartSoundEnabled = false;
+storage.state = {
+  ...storage.state,
+  mode: "break",
+  breakEndsAt: Date.now() - 1,
+  elapsedMs: 0,
+  lastTickAt: Date.now()
+};
+const ringsBeforeSilentWorkStart = calls.messages.filter(message => message.type === "ring").length;
+const notificationsBeforeSilentWorkStart = calls.notifications.length;
+await send({ type: "getStatus" });
+assert.equal(storage.state.mode, "work", "休息结束后应进入工作状态");
+assert.equal(calls.messages.filter(message => message.type === "ring").length, ringsBeforeSilentWorkStart, "关闭工作开始响铃后，休息结束不应播放声音");
+assert.ok(calls.notifications.length > notificationsBeforeSilentWorkStart, "关闭工作开始响铃不应影响系统通知");
+
+storage.settings.workEndSoundEnabled = false;
+storage.state = {
+  ...storage.state,
+  mode: "work",
+  elapsedMs: storage.settings.workMinutes * 60 * 1000,
+  lastTickAt: Date.now()
+};
+const ringsBeforeSilentWorkEnd = calls.messages.filter(message => message.type === "ring").length;
+const windowsBeforeSilentWorkEnd = calls.windows.length;
+await send({ type: "getStatus" });
+assert.equal(storage.state.mode, "break", "工作结束后应进入休息状态");
+assert.equal(calls.messages.filter(message => message.type === "ring").length, ringsBeforeSilentWorkEnd, "关闭工作结束响铃后，休息开始不应播放声音");
+assert.ok(calls.windows.length > windowsBeforeSilentWorkEnd, "关闭工作结束响铃不应影响浏览器提醒弹窗");
 
 alarms.delete("break-bell-tick");
 storage.state.mode = "work";
