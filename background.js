@@ -18,6 +18,12 @@ const DEFAULT_SETTINGS = {
   systemNotificationEnabled: true,
   popupEnabled: true,
   displaySleepAllowed: true,
+  themeId: "forest-dawn",
+  customTheme: {
+    primary: "#337D6B",
+    secondary: "#E59A68",
+    intensity: "balanced"
+  },
   windows: [{ start: "08:30", end: "22:00" }]
 };
 
@@ -25,6 +31,8 @@ let creatingOffscreen = null;
 let runningTick = null;
 let pendingWorkDeadlineDue = false;
 let reminderWindowId = null;
+const REMINDER_WINDOW_WIDTH = 560;
+const REMINDER_WINDOW_HEIGHT = 480;
 
 function dateKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -166,14 +174,48 @@ async function showReminderWindow(title, message, kind, durationMinutes = 0) {
   }
 
   const query = new URLSearchParams({ title, message, kind, durationMinutes: String(durationMinutes) });
+  const bounds = await getCenteredReminderBounds(REMINDER_WINDOW_WIDTH, REMINDER_WINDOW_HEIGHT);
   const popup = await chrome.windows.create({
     url: `reminder.html?${query}`,
     type: "popup",
     focused: true,
-    width: 430,
-    height: 360
+    width: REMINDER_WINDOW_WIDTH,
+    height: REMINDER_WINDOW_HEIGHT,
+    ...bounds
   });
   reminderWindowId = popup.id ?? null;
+}
+
+function intersectionArea(windowBounds, displayBounds) {
+  if (!windowBounds) return 0;
+  const left = Math.max(windowBounds.left ?? 0, displayBounds.left);
+  const top = Math.max(windowBounds.top ?? 0, displayBounds.top);
+  const right = Math.min((windowBounds.left ?? 0) + (windowBounds.width ?? 0), displayBounds.left + displayBounds.width);
+  const bottom = Math.min((windowBounds.top ?? 0) + (windowBounds.height ?? 0), displayBounds.top + displayBounds.height);
+  return Math.max(0, right - left) * Math.max(0, bottom - top);
+}
+
+async function getCenteredReminderBounds(width, height) {
+  try {
+    const [displays, browserWindow] = await Promise.all([
+      chrome.system.display.getInfo(),
+      chrome.windows.getLastFocused()
+    ]);
+    const display = displays.reduce((best, candidate) => {
+      if (!best) return candidate;
+      return intersectionArea(browserWindow, candidate.workArea) > intersectionArea(browserWindow, best.workArea)
+        ? candidate
+        : best;
+    }, displays.find(candidate => candidate.isPrimary) || displays[0]);
+    if (!display?.workArea) return {};
+    const workArea = display.workArea;
+    return {
+      left: Math.round(workArea.left + Math.max(0, workArea.width - width) / 2),
+      top: Math.round(workArea.top + Math.max(0, workArea.height - height) / 2)
+    };
+  } catch {
+    return {};
+  }
 }
 
 async function notify(title, message, { kind = "reminder", durationMinutes = 0, soundEvent = "", settingsOverride = {} } = {}) {

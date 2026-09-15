@@ -1,4 +1,71 @@
 const $ = id => document.getElementById(id);
-function fmt(ms) { const sec = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(sec / 60)).padStart(2,"0")}:${String(sec % 60).padStart(2,"0")}`; }
-async function load() { const { settings: s, state: st, soundStatus } = await chrome.runtime.sendMessage({ type: "getStatus" }); const work = st.mode === "work"; const paused = st.mode === "paused"; const pausedBreak = paused && st.pausedFrom === "break"; const pausedWork = paused && st.pausedFrom === "work"; $("status").textContent = paused ? "功能已暂停" : work ? "工作计时中" : st.mode === "break" ? "休息倒计时" : "当前为休息时段"; $("timer").textContent = pausedWork ? fmt(s.workMinutes * 60000 - st.elapsedMs) : pausedBreak ? fmt(st.breakEndsAt - st.pausedAt) : work ? fmt(s.workMinutes * 60000 - st.elapsedMs) : st.mode === "break" ? fmt(st.breakEndsAt - Date.now()) : paused ? "已暂停" : "休息"; $("detail").textContent = paused ? "恢复前不会累计计时或发送提醒" : work ? `每 ${s.workMinutes} 分钟提醒一次 · 休息 ${s.breakMinutes} 分钟` : "下一工作时段开始时会自动提醒"; $("displaySleepAllowed").checked = s.displaySleepAllowed; $("soundControl").hidden = !soundStatus; if (soundStatus) $("soundText").textContent = `正在播放：${soundStatus.title}`; $("pause").disabled = false; $("pause").textContent = paused ? "继续功能" : "暂停功能"; }
-load(); setInterval(load, 1000); $("pause").onclick = async () => { await chrome.runtime.sendMessage({ type: "togglePause" }); load(); }; $("reset").onclick = async () => { await chrome.runtime.sendMessage({ type: "reset" }); load(); }; $("displaySleepAllowed").onchange = async event => { const response = await chrome.runtime.sendMessage({ type: "setDisplaySleepAllowed", displaySleepAllowed: event.target.checked }); if (!response?.ok) event.target.checked = !event.target.checked; }; $("stopSound").onclick = async () => { await chrome.runtime.sendMessage({ type: "stopReminderSound" }); load(); }; $("options").onclick = () => chrome.runtime.openOptionsPage();
+
+function fmt(ms) {
+  const seconds = Math.max(0, Math.ceil(ms / 1000));
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+async function load() {
+  const { settings, state, soundStatus } = await chrome.runtime.sendMessage({ type: "getStatus" });
+  BreakBellTheme.applyTheme(settings);
+  const working = state.mode === "work";
+  const paused = state.mode === "paused";
+  const pausedBreak = paused && state.pausedFrom === "break";
+  const pausedWork = paused && state.pausedFrom === "work";
+
+  $("status").textContent = paused
+    ? "功能已暂停"
+    : working
+      ? "工作计时中"
+      : state.mode === "break"
+        ? "休息倒计时"
+        : "当前为休息时段";
+  $("timer").textContent = pausedWork
+    ? fmt(settings.workMinutes * 60000 - state.elapsedMs)
+    : pausedBreak
+      ? fmt(state.breakEndsAt - state.pausedAt)
+      : working
+        ? fmt(settings.workMinutes * 60000 - state.elapsedMs)
+        : state.mode === "break"
+          ? fmt(state.breakEndsAt - Date.now())
+          : paused ? "已暂停" : "休息";
+  $("detail").textContent = paused
+    ? "恢复前不会累计计时或发送提醒"
+    : working
+      ? `每 ${settings.workMinutes} 分钟提醒一次 · 休息 ${settings.breakMinutes} 分钟`
+      : "下一工作时段开始时会自动提醒";
+  $("displaySleepAllowed").checked = settings.displaySleepAllowed;
+  $("soundControl").hidden = !soundStatus;
+  if (soundStatus) $("soundText").textContent = `正在播放：${soundStatus.title}`;
+  $("pause").disabled = false;
+  $("pause").textContent = paused ? "继续功能" : "暂停功能";
+  document.body.dataset.mode = paused ? "paused" : state.mode;
+}
+
+void load();
+setInterval(load, 1000);
+
+$("pause").onclick = async () => {
+  await chrome.runtime.sendMessage({ type: "togglePause" });
+  await load();
+};
+
+$("reset").onclick = async () => {
+  await chrome.runtime.sendMessage({ type: "reset" });
+  await load();
+};
+
+$("displaySleepAllowed").onchange = async event => {
+  const response = await chrome.runtime.sendMessage({
+    type: "setDisplaySleepAllowed",
+    displaySleepAllowed: event.target.checked
+  });
+  if (!response?.ok) event.target.checked = !event.target.checked;
+};
+
+$("stopSound").onclick = async () => {
+  await chrome.runtime.sendMessage({ type: "stopReminderSound" });
+  await load();
+};
+
+$("options").onclick = () => chrome.runtime.openOptionsPage();

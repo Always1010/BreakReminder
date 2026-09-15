@@ -15,6 +15,8 @@ const storage = {
     workEndSoundEnabled: true,
     systemNotificationEnabled: true,
     popupEnabled: true,
+    themeId: "forest-dawn",
+    customTheme: { primary: "#337D6B", secondary: "#E59A68", intensity: "balanced" },
     windows: [{ start: "00:00", end: "24:00" }]
   }
 };
@@ -56,8 +58,19 @@ globalThis.chrome = {
   },
   windows: {
     async create(options) { calls.windows.push(options); return { id: calls.windows.length }; },
+    async getLastFocused() { return { left: 2100, top: 80, width: 1200, height: 900 }; },
     async remove(id) { calls.removedWindows.push(id); },
     onRemoved: eventSlot(() => {})
+  },
+  system: {
+    display: {
+      async getInfo() {
+        return [
+          { id: "primary", isPrimary: true, workArea: { left: 0, top: 0, width: 1920, height: 1040 } },
+          { id: "secondary", isPrimary: false, workArea: { left: 1920, top: 0, width: 2560, height: 1440 } }
+        ];
+      }
+    }
   },
   runtime: {
     getURL(path) { return `chrome-extension://test/${path}`; },
@@ -78,6 +91,11 @@ assert.ok(alarms.has("break-bell-work-deadline"), "进入工作时段时应创�
 assert.equal(storage.state.mode, "work", "当前位于工作时段时应进入工作模式");
 assert.ok(calls.notifications.length >= 1, "进入工作时段时应创建系统通知");
 assert.ok(calls.windows.length >= 1, "进入工作时段时应打开提醒弹窗");
+assert.deepEqual(
+  { width: calls.windows[0].width, height: calls.windows[0].height, left: calls.windows[0].left, top: calls.windows[0].top },
+  { width: 560, height: 480, left: 2920, top: 480 },
+  "提醒弹窗应放大并在当前屏幕的可用区域居中"
+);
 assert.ok(calls.messages.some(message => message.target === "offscreen"), "提醒时应独立发送声音播放消息");
 assert.ok(calls.messages.some(message => message.type === "ring" && message.durationMinutes === 5), "铃声默认应循环五分钟");
 assert.ok(calls.messages.some(message => message.type === "ring" && message.audioOutputDeviceId === "speaker-device-id"), "应把选定的输出设备传给离屏播放器");
