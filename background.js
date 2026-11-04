@@ -65,6 +65,18 @@ function getWindow(settings, minute = nowMinutes()) {
   return settings.windows.findIndex(window => minute >= minutes(window.start) && minute < minutes(window.end));
 }
 
+function resetTimerState(settings, previousState) {
+  const windowIndex = getWindow(settings);
+  const mode = windowIndex >= 0 ? "work" : "outside";
+  return {
+    ...blankState(),
+    mode: previousState.mode === "paused" ? "paused" : mode,
+    windowIndex,
+    pausedFrom: previousState.mode === "paused" ? mode : null,
+    pausedAt: previousState.mode === "paused" ? Date.now() : 0
+  };
+}
+
 async function getSettings() {
   const stored = await chrome.storage.local.get("settings");
   return { ...DEFAULT_SETTINGS, ...(stored.settings || {}) };
@@ -266,6 +278,13 @@ async function tick({ workDeadlineDue = false } = {}) {
 
   const now = Date.now();
   const rawDelta = Math.max(0, now - (state.lastTickAt || now));
+
+  if (state.mode === "paused") {
+    await putState(state);
+    await clearWorkDeadline();
+    return;
+  }
+
   const locked = (await chrome.idle.queryState(60)) === "locked";
 
   if (locked) {
@@ -277,12 +296,6 @@ async function tick({ workDeadlineDue = false } = {}) {
 
   if (rawDelta > MAX_CONTINUOUS_TICK_GAP_MS && state.mode === "break") {
     state.breakEndsAt += rawDelta;
-  }
-
-  if (state.mode === "paused") {
-    await putState(state);
-    await clearWorkDeadline();
-    return;
   }
 
   const activeWindowIndex = getWindow(settings);
@@ -374,7 +387,10 @@ async function initialize({ reset = false } = {}) {
   const stored = await chrome.storage.local.get("settings");
   if (!stored.settings) await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
   syncDisplaySleep(await getSettings());
-  if (reset) await chrome.storage.local.set({ state: blankState() });
+  // Keep the user's stopped state across browser restarts and extension updates.
+  if (reset && (await getState()).mode !== "paused") {
+    await chrome.storage.local.set({ state: blankState() });
+  }
   await ensureTickAlarm();
   await runTick();
 }
@@ -408,12 +424,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       await stopSound();
       const settings = await getSettings();
-      const windowIndex = getWindow(settings);
-      const state = {
-        ...blankState(),
-        mode: windowIndex >= 0 ? "work" : "outside",
-        windowIndex
-      };
+      const state = resetTimerState(settings, await getState());
       await putState(state);
       await scheduleWorkDeadline(state, settings);
       sendResponse({ ok: true });
@@ -466,8 +477,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await stopSound();
       const settings = await getSettings();
       syncDisplaySleep(settings);
-      const windowIndex = getWindow(settings);
-      const state = { ...blankState(), mode: windowIndex >= 0 ? "work" : "outside", windowIndex };
+      const state = resetTimerState(settings, await getState());
       await putState(state);
       await scheduleWorkDeadline(state, settings);
       await ensureTickAlarm();

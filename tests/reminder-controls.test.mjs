@@ -22,7 +22,9 @@ for (const id of ["workStartSoundEnabled", "workEndSoundEnabled"]) {
   assert.ok(optionsJs.includes(`${id}: $("${id}").checked`), `设置页应保存 ${id} 响铃节点设置`);
 }
 
-assert.ok(popupHtml.includes('id="pause"'), "主界面应提供全局暂停按钮");
+assert.ok(popupHtml.includes('id="pause"') && popupHtml.includes('>停止提醒</button>'), "主界面应提供停止提醒按钮");
+assert.ok(popupJs.includes('paused ? "开启提醒" : "停止提醒"'), "停止后应提供明确的开启提醒入口");
+assert.ok(popupJs.includes('"提醒已停止"') && popupJs.includes('重启浏览器后仍保持停止'), "停止状态应说明重启后仍会保留");
 assert.ok(popupHtml.includes('id="stopSound"'), "主界面应提供停止当前声音按钮");
 assert.ok(popupJs.includes('type: "togglePause"'), "暂停按钮应调用暂停接口");
 assert.ok(popupJs.includes('type: "stopReminderSound"'), "停止声音按钮应调用停止接口");

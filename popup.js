@@ -14,7 +14,7 @@ async function load() {
   const pausedWork = paused && state.pausedFrom === "work";
 
   $("status").textContent = paused
-    ? "功能已暂停"
+    ? "提醒已停止"
     : working
       ? "工作计时中"
       : state.mode === "break"
@@ -28,9 +28,9 @@ async function load() {
         ? fmt(settings.workMinutes * 60000 - state.elapsedMs)
         : state.mode === "break"
           ? fmt(state.breakEndsAt - Date.now())
-          : paused ? "已暂停" : "休息";
+          : paused ? "已停止" : "休息";
   $("detail").textContent = paused
-    ? "恢复前不会累计计时或发送提醒"
+    ? "重启浏览器后仍保持停止，点击开启提醒后才会继续"
     : working
       ? `每 ${settings.workMinutes} 分钟提醒一次 · 休息 ${settings.breakMinutes} 分钟`
       : "下一工作时段开始时会自动提醒";
@@ -38,7 +38,7 @@ async function load() {
   $("soundControl").hidden = !soundStatus;
   if (soundStatus) $("soundText").textContent = `正在播放：${soundStatus.title}`;
   $("pause").disabled = false;
-  $("pause").textContent = paused ? "继续功能" : "暂停功能";
+  $("pause").textContent = paused ? "开启提醒" : "停止提醒";
   document.body.dataset.mode = paused ? "paused" : state.mode;
 }
 

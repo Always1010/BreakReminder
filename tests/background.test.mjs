@@ -24,6 +24,8 @@ const alarms = new Map();
 const calls = { notifications: [], windows: [], messages: [], removedWindows: [], keepAwakeRequests: 0, keepAwakeReleases: 0 };
 let messageListener;
 let alarmListener;
+let startupListener;
+let installedListener;
 let offscreenOpen = false;
 
 function eventSlot(setter) {
@@ -76,8 +78,8 @@ globalThis.chrome = {
     getURL(path) { return `chrome-extension://test/${path}`; },
     async getContexts() { return offscreenOpen ? [{ contextType: "OFFSCREEN_DOCUMENT" }] : []; },
     async sendMessage(message) { calls.messages.push(message); return { ok: true }; },
-    onInstalled: eventSlot(() => {}),
-    onStartup: eventSlot(() => {}),
+    onInstalled: eventSlot(listener => { installedListener = listener; }),
+    onStartup: eventSlot(listener => { startupListener = listener; }),
     onMessage: eventSlot(listener => { messageListener = listener; })
   }
 };
@@ -144,6 +146,33 @@ const pausedElapsed = storage.state.elapsedMs;
 await send({ type: "getStatus" });
 assert.equal(storage.state.mode, "paused", "暂停时应保持暂停状态");
 assert.equal(storage.state.elapsedMs, pausedElapsed, "暂停时不应累计工作时长");
+
+async function assertStoppedWithoutReminders(action, description) {
+  const elapsedMs = storage.state.elapsedMs;
+  const counts = [calls.notifications.length, calls.windows.length, calls.messages.filter(message => message.type === "ring").length];
+  await action();
+  await new Promise(resolve => setImmediate(resolve));
+  const status = await send({ type: "getStatus" });
+  assert.equal(status.state.mode, "paused", `${description}后应保持停止`);
+  assert.equal(status.state.elapsedMs, elapsedMs, `${description}后不应累计计时`);
+  assert.equal(alarms.has("break-bell-work-deadline"), false, `${description}后不应保留工作截止闹钟`);
+  assert.deepEqual(
+    [calls.notifications.length, calls.windows.length, calls.messages.filter(message => message.type === "ring").length],
+    counts,
+    `${description}后不应发送通知、弹窗或播放声音`
+  );
+}
+
+await assertStoppedWithoutReminders(async () => {
+  await import("../background.js?stopped-worker-reload");
+}, "后台重新加载");
+await assertStoppedWithoutReminders(() => {
+  alarms.clear();
+  startupListener();
+}, "浏览器重启");
+await assertStoppedWithoutReminders(() => installedListener({ reason: "update" }), "扩展更新");
+await assertStoppedWithoutReminders(() => alarmListener({ name: "break-bell-work-deadline" }), "旧截止闹钟触发");
+
 const resumeResponse = await send({ type: "togglePause" });
 assert.deepEqual(resumeResponse, { ok: true, paused: false }, "暂停后的工作计时应能继续");
 assert.equal(storage.state.mode, "work", "恢复后应回到工作计时");
@@ -159,6 +188,12 @@ storage.state = {
 const breakPauseResponse = await send({ type: "togglePause" });
 assert.deepEqual(breakPauseResponse, { ok: true, paused: true }, "休息倒计时也应能暂停整个功能");
 assert.equal(storage.state.pausedFrom, "break", "暂停时应保存原本的休息状态");
+const remainingBreakMs = storage.state.breakEndsAt - storage.state.pausedAt;
+storage.state.lastTickAt -= 12 * 60 * 60 * 1000;
+storage.state.pausedAt -= 12 * 60 * 60 * 1000;
+storage.state.breakEndsAt -= 12 * 60 * 60 * 1000;
+await assertStoppedWithoutReminders(() => startupListener(), "休息中停止后重启");
+assert.equal(storage.state.breakEndsAt - storage.state.pausedAt, remainingBreakMs, "重启不应改变停止时保留的休息进度");
 const breakResumeResponse = await send({ type: "togglePause" });
 assert.deepEqual(breakResumeResponse, { ok: true, paused: false }, "休息倒计时也应能恢复");
 assert.equal(storage.state.mode, "break", "恢复后应回到休息倒计时");
@@ -235,5 +270,26 @@ await send({ type: "getStatus" });
 assert.ok(alarms.has("break-bell-tick"), "周期闹钟丢失后应自动重建");
 assert.equal(storage.state.mode, "break", "达到工作时长后应自动进入休息倒计时");
 assert.ok(calls.notifications.some(call => call.options.title === "该休息了"), "达到工作时长后应发出休息通知");
+
+await send({ type: "togglePause" });
+storage.state.date = "2000-01-01";
+await assertStoppedWithoutReminders(() => startupListener(), "跨天重启");
+await send({ type: "togglePause" });
+assert.equal(storage.state.mode, "work", "跨天后只有主动开启才应恢复工作");
+assert.equal(storage.state.elapsedMs, 0, "跨天主动开启时应开始新一轮计时");
+
+await send({ type: "togglePause" });
+await assertStoppedWithoutReminders(() => send({ type: "reset" }), "重置计时");
+storage.settings.windows = [];
+await assertStoppedWithoutReminders(() => send({ type: "settingsChanged" }), "保存设置进入时段外");
+await assertStoppedWithoutReminders(() => startupListener(), "时段外重启");
+await send({ type: "togglePause" });
+assert.equal(storage.state.mode, "outside", "时段外主动开启应保持等待工作时段");
+await send({ type: "togglePause" });
+storage.settings.windows = [{ start: "00:00", end: "24:00" }];
+await assertStoppedWithoutReminders(() => send({ type: "settingsChanged" }), "停止期间进入工作时段");
+await send({ type: "togglePause" });
+assert.equal(storage.state.mode, "work", "重新进入工作时段后应等待主动开启");
+assert.ok(alarms.has("break-bell-work-deadline"), "主动开启工作提醒后应重新建立截止闹钟");
 
 console.log("background reminder tests passed");
